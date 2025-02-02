@@ -127,20 +127,17 @@ function get_count(df_domain, gby_cols)
 end	
 
 # ╔═╡ df53fd12-1e37-4f3e-9af4-2bddbc6dc477
-get_count(df_domain, [:remoteAddr])
+#get_count(df_domain, [:remoteAddr])
 
 # ╔═╡ 1d9bbec8-3930-484f-9922-10d3f4ce96c0
-get_count(df_domain, [:userAgent])
+#get_count(df_domain, [:userAgent])
 
 # ╔═╡ 8e99afc7-aa99-4ce5-9d45-a77492f0c412
 begin
-	df_count = get_count(df_domain, [:remoteAddr, :userAgent])
-	df_count_filter = filter(row -> (occursin("python", 
-		                                       row.userAgent)), df_count) 
+	df_count = get_count(df_domain, [:remoteAddr])
+	# df_count_filter = filter(row -> (occursin("python", 
+	# 	                                       row.userAgent)), df_count) 
 end
-
-# ╔═╡ f80fa955-fa16-4524-a3ba-57eecbb58108
-df_count_filter
 
 # ╔═╡ 40f83181-b9ff-4cfc-b439-d0027a215cd0
 md"""
@@ -169,10 +166,45 @@ function get_geolocation(ip::String)
 end
 
 # ╔═╡ f94c0aca-14f8-480b-864d-bd5a72398a3f
-get_geolocation("115.159.220.67")
+#get_geolocation("115.159.220.67")
 
 # ╔═╡ 22ae387b-abe6-4349-bfcd-97f28bdb00f4
+function ip_to_geo_df(df_count_filter::DataFrame)
 
+	all_ips = df_count_filter[!, :remoteAddr]
+	geo_dicts = []
+
+	for ip in all_ips
+		try
+			geo_dict = get_geolocation(ip)
+			push!(geo_dicts, geo_dict)
+		catch
+			# Rate limit of 45 requests per second
+			break
+		end
+	end
+
+	df = DataFrame(vcat(geo_dicts...))
+
+	return df
+
+end
+
+# ╔═╡ b312253b-4322-4f56-96b7-87ef34702ee8
+md"""
+#### Merge with count data
+"""
+
+# ╔═╡ e1e652bf-c27b-4c2c-9678-0e8a3f610ebc
+begin	
+	df_geo = ip_to_geo_df(df_count)
+	
+	df_geo_join = leftjoin(df_geo,
+		                   df_count,
+		                   on = :query => :remoteAddr)
+	
+	rename!(df_geo_join, Dict(:count => "count_ips"))
+end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -591,10 +623,11 @@ version = "5.11.0+0"
 # ╠═df53fd12-1e37-4f3e-9af4-2bddbc6dc477
 # ╠═1d9bbec8-3930-484f-9922-10d3f4ce96c0
 # ╠═8e99afc7-aa99-4ce5-9d45-a77492f0c412
-# ╠═f80fa955-fa16-4524-a3ba-57eecbb58108
 # ╟─40f83181-b9ff-4cfc-b439-d0027a215cd0
-# ╠═c433e976-0b1a-4aa7-9b12-52b257a9047d
+# ╟─c433e976-0b1a-4aa7-9b12-52b257a9047d
 # ╠═f94c0aca-14f8-480b-864d-bd5a72398a3f
-# ╠═22ae387b-abe6-4349-bfcd-97f28bdb00f4
+# ╟─22ae387b-abe6-4349-bfcd-97f28bdb00f4
+# ╟─b312253b-4322-4f56-96b7-87ef34702ee8
+# ╠═e1e652bf-c27b-4c2c-9678-0e8a3f610ebc
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
