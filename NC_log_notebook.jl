@@ -5,7 +5,13 @@ using Markdown
 using InteractiveUtils
 
 # ╔═╡ f87b8466-dc05-11ef-2c7f-6585551df9a1
-using JSON, DataFrames, Dates, HTTP, JSON3
+using JSON,
+      DataFrames,
+      Dates,
+      HTTP,
+      JSON3,
+      CSV,
+      Sockets
 
 # ╔═╡ 4d81e853-e592-40c0-a66a-f5fa11467fe9
 md"""
@@ -210,16 +216,68 @@ end
 # ╔═╡ f573d1f1-f359-4ef9-8822-337ea58d7938
 df_geo = geo_join_ip(df_count)
 
+# ╔═╡ 280be0cd-228c-42cb-a65a-1f717c98ceb6
+md"""
+#### Read IP database
+"""
+
+# ╔═╡ 4f0aa43d-4e7a-4ea0-82cb-05197cba68bb
+function ip_csv_to_df(fname::String)	
+
+	df_ip = CSV.read(fname, DataFrame;
+		              header = [:ip_start, 
+					            :ip_end,
+						        :continent,
+					            :country,
+					            :stateprov,
+					            :city,
+						        :latitude,
+						        :longitude				  
+					           ],
+		              select = [:ip_start, 
+					            :ip_end,
+					            :country,
+					            :stateprov,
+					            :city
+					           ],
+		             missingstring = ""
+	                 )
+
+	# Filter out ipv4 addresses
+	df_ipv4 = filter(row -> occursin(".", 
+		                             row.ip_start), df_ip)
+
+	# Filter out ipv6 addresses
+	df_ipv6 = filter(row -> occursin(":", 
+		                             row.ip_start), df_ip)
+
+	# Convert to types provided by Sockets
+	df_ipv4.ip_start = IPv4.(df_ipv4.ip_start)
+	df_ipv4.ip_end = IPv4.(df_ipv4.ip_end)
+
+	df_ipv6.ip_start = IPv6.(df_ipv6.ip_start)
+	df_ipv6.ip_end = IPv6.(df_ipv6.ip_end)
+	
+
+	return df_ipv4, df_ipv6
+end	
+
+# ╔═╡ 872d359e-c013-4f72-a569-867d3fa3805d
+df_ipv4, df_ipv6 = ip_csv_to_df("dbip-city-lite-2025-02.csv")
+
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
+CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 HTTP = "cd3eb016-35fb-5094-929b-558a96fad6f3"
 JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
+Sockets = "6462fe0b-24de-5631-8697-dd941f90decc"
 
 [compat]
+CSV = "~0.10.15"
 DataFrames = "~1.7.0"
 HTTP = "~1.10.15"
 JSON = "~0.21.4"
@@ -232,7 +290,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.11.3"
 manifest_format = "2.0"
-project_hash = "3543f50550c8087530a70448bda9dc70e4e8e46b"
+project_hash = "6fdf25667d3140c8ffe3b21a9617b6e47cb14fb1"
 
 [[deps.Artifacts]]
 uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
@@ -246,6 +304,12 @@ version = "1.11.0"
 git-tree-sha1 = "0691e34b3bb8be9307330f88d1a3c3f25466c24d"
 uuid = "d1d4a3ce-64b1-5f1a-9ba4-7e7e69966f35"
 version = "0.1.9"
+
+[[deps.CSV]]
+deps = ["CodecZlib", "Dates", "FilePathsBase", "InlineStrings", "Mmap", "Parsers", "PooledArrays", "PrecompileTools", "SentinelArrays", "Tables", "Unicode", "WeakRefStrings", "WorkerUtilities"]
+git-tree-sha1 = "deddd8725e5e1cc49ee205a1964256043720a6c3"
+uuid = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+version = "0.10.15"
 
 [[deps.CodecZlib]]
 deps = ["TranscodingStreams", "Zlib_jll"]
@@ -311,6 +375,17 @@ deps = ["Test"]
 git-tree-sha1 = "d36f682e590a83d63d1c7dbd287573764682d12a"
 uuid = "460bff9d-24e4-43bc-9d9f-a8973cb893f4"
 version = "0.1.11"
+
+[[deps.FilePathsBase]]
+deps = ["Compat", "Dates"]
+git-tree-sha1 = "2ec417fc319faa2d768621085cc1feebbdee686b"
+uuid = "48062228-2e41-5def-b9a4-89aafe57970f"
+version = "0.9.23"
+weakdeps = ["Mmap", "Test"]
+
+    [deps.FilePathsBase.extensions]
+    FilePathsBaseMmapExt = "Mmap"
+    FilePathsBaseTestExt = "Test"
 
 [[deps.Future]]
 deps = ["Random"]
@@ -594,6 +669,17 @@ version = "1.11.0"
 uuid = "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5"
 version = "1.11.0"
 
+[[deps.WeakRefStrings]]
+deps = ["DataAPI", "InlineStrings", "Parsers"]
+git-tree-sha1 = "b1be2855ed9ed8eac54e5caff2afcdb442d52c23"
+uuid = "ea10d353-3f73-51f8-a26c-33c1cb351aa5"
+version = "1.4.2"
+
+[[deps.WorkerUtilities]]
+git-tree-sha1 = "cd1659ba0d57b71a464a29e64dbc67cfe83d54e7"
+uuid = "76eceee3-57b5-4d4a-8e66-0e911cebbf60"
+version = "1.6.1"
+
 [[deps.Zlib_jll]]
 deps = ["Libdl"]
 uuid = "83775a58-1f1d-513f-b197-d71354ab007a"
@@ -634,5 +720,8 @@ version = "5.11.0+0"
 # ╟─b312253b-4322-4f56-96b7-87ef34702ee8
 # ╟─65e31759-efb9-426a-b49e-4d8ad4d3a01f
 # ╠═f573d1f1-f359-4ef9-8822-337ea58d7938
+# ╟─280be0cd-228c-42cb-a65a-1f717c98ceb6
+# ╟─4f0aa43d-4e7a-4ea0-82cb-05197cba68bb
+# ╠═872d359e-c013-4f72-a569-867d3fa3805d
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
