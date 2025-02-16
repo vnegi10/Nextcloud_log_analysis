@@ -19,7 +19,7 @@ md"""
 """
 
 # ╔═╡ 15e06b0a-13de-4d70-99aa-f870b3b07732
-fname_1 = joinpath(@__DIR__, "nextcloud.log")
+fname_1 = joinpath(@__DIR__, "nextcloud.log.json")
 
 # ╔═╡ 2ffc741b-09c2-4e44-a190-f187a0a7b6cd
 #all_lines = readlines(fname)
@@ -98,7 +98,7 @@ md"""
 """
 
 # ╔═╡ 53533056-c888-4e63-8844-24cefdc67007
-df_domain = log_to_df(fname_1, "Trusted domain error", "message")
+df_domain = log_to_df(fname_1, "Trusted domain error", "message");
 
 # ╔═╡ 71fbc64b-ca35-4129-a182-95a43deae8db
 # Find the minimum and maximum dates
