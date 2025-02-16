@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.3
+# v0.20.4
 
 using Markdown
 using InteractiveUtils
@@ -13,10 +13,7 @@ md"""
 """
 
 # ╔═╡ 15e06b0a-13de-4d70-99aa-f870b3b07732
-begin
-	fname_1 = joinpath(@__DIR__, "nextcloud.log")
-	fname_2 = joinpath(@__DIR__, "nextcloud_web_download.log")
-end
+fname_1 = joinpath(@__DIR__, "nextcloud.log")
 
 # ╔═╡ 2ffc741b-09c2-4e44-a190-f187a0a7b6cd
 #all_lines = readlines(fname)
@@ -95,7 +92,7 @@ md"""
 """
 
 # ╔═╡ 53533056-c888-4e63-8844-24cefdc67007
-df_domain = log_to_df(fname_2, "Trusted domain", "message")
+df_domain = log_to_df(fname_1, "Trusted domain error", "message")
 
 # ╔═╡ 71fbc64b-ca35-4129-a182-95a43deae8db
 # Find the minimum and maximum dates
@@ -116,9 +113,12 @@ md"""
 """
 
 # ╔═╡ a64e8d78-ca5e-43e6-bc23-05b074175536
-function get_count(df_domain, gby_cols)
+function get_count(df_domain, filter_string, gby_cols)
 
-	df_counts = combine(groupby(df_domain, 
+	df_domain_filter = filter(row -> (occursin(filter_string, 
+		                                        row.userAgent)), df_domain) 
+
+	df_counts = combine(groupby(df_domain_filter, 
 		                        gby_cols), 
 		                        nrow => :count)
 	
@@ -133,11 +133,7 @@ end
 #get_count(df_domain, [:userAgent])
 
 # ╔═╡ 8e99afc7-aa99-4ce5-9d45-a77492f0c412
-begin
-	df_count = get_count(df_domain, [:remoteAddr])
-	# df_count_filter = filter(row -> (occursin("python", 
-	# 	                                       row.userAgent)), df_count) 
-end
+df_count = get_count(df_domain, "python", [:remoteAddr])
 
 # ╔═╡ 40f83181-b9ff-4cfc-b439-d0027a215cd0
 md"""
@@ -180,6 +176,7 @@ function ip_to_geo_df(df_count_filter::DataFrame)
 			push!(geo_dicts, geo_dict)
 		catch
 			# Rate limit of 45 requests per second
+			@info "Rate limit of 45 requests per second reached!"
 			break
 		end
 	end
@@ -195,8 +192,9 @@ md"""
 #### Merge with count data
 """
 
-# ╔═╡ e1e652bf-c27b-4c2c-9678-0e8a3f610ebc
-begin	
+# ╔═╡ 65e31759-efb9-426a-b49e-4d8ad4d3a01f
+function geo_join_ip(df_count::DataFrame)
+
 	df_geo = ip_to_geo_df(df_count)
 	
 	df_geo_join = leftjoin(df_geo,
@@ -204,7 +202,13 @@ begin
 		                   on = :query => :remoteAddr)
 	
 	rename!(df_geo_join, Dict(:count => "count_ips"))
+
+	return df_geo_join
+
 end
+
+# ╔═╡ f573d1f1-f359-4ef9-8822-337ea58d7938
+df_geo = geo_join_ip(df_count)
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -226,7 +230,7 @@ JSON3 = "~1.14.0"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.11.1"
+julia_version = "1.11.3"
 manifest_format = "2.0"
 project_hash = "3543f50550c8087530a70448bda9dc70e4e8e46b"
 
@@ -628,6 +632,7 @@ version = "5.11.0+0"
 # ╠═f94c0aca-14f8-480b-864d-bd5a72398a3f
 # ╟─22ae387b-abe6-4349-bfcd-97f28bdb00f4
 # ╟─b312253b-4322-4f56-96b7-87ef34702ee8
-# ╠═e1e652bf-c27b-4c2c-9678-0e8a3f610ebc
+# ╟─65e31759-efb9-426a-b49e-4d8ad4d3a01f
+# ╠═f573d1f1-f359-4ef9-8822-337ea58d7938
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
