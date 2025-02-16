@@ -111,7 +111,7 @@ df_domain = log_to_df(fname_1, "Trusted domain error", "message")
 rows, cols = size(df_domain)
 
 # ╔═╡ 843b32ef-d77f-483c-b4e6-6e9e5ab78290
-df_domain.remoteAddr |> unique |> length
+df_domain.userAgent |> unique
 
 # ╔═╡ 4a613851-178f-4bd9-8a07-26e9911f49db
 md"""
@@ -139,11 +139,16 @@ end
 #get_count(df_domain, [:userAgent])
 
 # ╔═╡ 8e99afc7-aa99-4ce5-9d45-a77492f0c412
-df_count = get_count(df_domain, "python", [:remoteAddr])
+df_count = get_count(df_domain, "Macintosh", [:remoteAddr])
 
 # ╔═╡ 40f83181-b9ff-4cfc-b439-d0027a215cd0
 md"""
 ### Geolocate IP
+"""
+
+# ╔═╡ cf972491-7e57-4ed1-b04a-87db52568117
+md"""
+#### Fetch using API
 """
 
 # ╔═╡ c433e976-0b1a-4aa7-9b12-52b257a9047d
@@ -214,7 +219,7 @@ function geo_join_ip_api(df_count::DataFrame)
 end
 
 # ╔═╡ f573d1f1-f359-4ef9-8822-337ea58d7938
-df_geo_api = geo_join_ip_api(df_count)
+#df_geo_api = geo_join_ip_api(df_count)
 
 # ╔═╡ 280be0cd-228c-42cb-a65a-1f717c98ceb6
 md"""
@@ -262,7 +267,7 @@ function ip_csv_to_df(fname::String)
 end	
 
 # ╔═╡ 872d359e-c013-4f72-a569-867d3fa3805d
-df_ipv4 = ip_csv_to_df("dbip-city-lite-2025-02.csv")
+#df_ipv4 = ip_csv_to_df("dbip-city-lite-2025-02.csv")
 
 # ╔═╡ b0070a92-10fc-4610-86eb-a33fa2d9b96a
 md"""
@@ -302,7 +307,7 @@ function geo_join_ip_db(df_count::DataFrame)
 end
 
 # ╔═╡ 31a396b8-c218-4776-8790-51bf5162f6f1
-@time df_geo_db = geo_join_ip_db(df_count)
+#@time df_geo_db = geo_join_ip_db(df_count)
 
 # ╔═╡ d6453d94-9580-4146-86f9-0511143487a3
 function geo_join_ip_db_opt(df_count::DataFrame)
@@ -347,9 +352,13 @@ function geo_join_ip_db_opt(df_count::DataFrame)
 
 	df_all = DataFrame(vcat(all_matches...))
 
-	insertcols!(df_all, 1, :remoteAddr => found_ips)	
+	insertcols!(df_all, 1, :remoteAddr => found_ips)
+
+	df_all_join = leftjoin(df_all,
+		                   df_count,
+		                   on = :remoteAddr)
 	
-	return df_all
+	return df_all_join
 
 end
 
@@ -805,6 +814,7 @@ version = "5.11.0+0"
 # ╠═1d9bbec8-3930-484f-9922-10d3f4ce96c0
 # ╠═8e99afc7-aa99-4ce5-9d45-a77492f0c412
 # ╟─40f83181-b9ff-4cfc-b439-d0027a215cd0
+# ╟─cf972491-7e57-4ed1-b04a-87db52568117
 # ╟─c433e976-0b1a-4aa7-9b12-52b257a9047d
 # ╠═f94c0aca-14f8-480b-864d-bd5a72398a3f
 # ╟─22ae387b-abe6-4349-bfcd-97f28bdb00f4
