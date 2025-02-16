@@ -171,7 +171,7 @@ end
 #get_geolocation("115.159.220.67")
 
 # ╔═╡ 22ae387b-abe6-4349-bfcd-97f28bdb00f4
-function ip_to_geo_df(df_count_filter::DataFrame)
+function ip_api_to_geo_df(df_count_filter::DataFrame)
 
 	all_ips = df_count_filter[!, :remoteAddr]
 	geo_dicts = []
@@ -199,9 +199,9 @@ md"""
 """
 
 # ╔═╡ 65e31759-efb9-426a-b49e-4d8ad4d3a01f
-function geo_join_ip(df_count::DataFrame)
+function geo_join_ip_api(df_count::DataFrame)
 
-	df_geo = ip_to_geo_df(df_count)
+	df_geo = ip_api_to_geo_df(df_count)
 	
 	df_geo_join = leftjoin(df_geo,
 		                   df_count,
@@ -214,7 +214,7 @@ function geo_join_ip(df_count::DataFrame)
 end
 
 # ╔═╡ f573d1f1-f359-4ef9-8822-337ea58d7938
-df_geo = geo_join_ip(df_count)
+df_geo_api = geo_join_ip_api(df_count)
 
 # ╔═╡ 280be0cd-228c-42cb-a65a-1f717c98ceb6
 md"""
@@ -247,23 +247,62 @@ function ip_csv_to_df(fname::String)
 	df_ipv4 = filter(row -> occursin(".", 
 		                             row.ip_start), df_ip)
 
-	# Filter out ipv6 addresses
-	df_ipv6 = filter(row -> occursin(":", 
-		                             row.ip_start), df_ip)
+	# # Filter out ipv6 addresses
+	# df_ipv6 = filter(row -> occursin(":", 
+	# 	                             row.ip_start), df_ip)
 
 	# Convert to types provided by Sockets
-	df_ipv4.ip_start = IPv4.(df_ipv4.ip_start)
-	df_ipv4.ip_end = IPv4.(df_ipv4.ip_end)
+	df_ipv4.ip_start = UInt32.(IPv4.(df_ipv4.ip_start))
+	df_ipv4.ip_end = UInt32.(IPv4.(df_ipv4.ip_end))
 
-	df_ipv6.ip_start = IPv6.(df_ipv6.ip_start)
-	df_ipv6.ip_end = IPv6.(df_ipv6.ip_end)
-	
+	# df_ipv6.ip_start = IPv6.(df_ipv6.ip_start)
+	# df_ipv6.ip_end = IPv6.(df_ipv6.ip_end)	
 
-	return df_ipv4, df_ipv6
+	return df_ipv4
 end	
 
 # ╔═╡ 872d359e-c013-4f72-a569-867d3fa3805d
-df_ipv4, df_ipv6 = ip_csv_to_df("dbip-city-lite-2025-02.csv")
+df_ipv4 = ip_csv_to_df("dbip-city-lite-2025-02.csv")
+
+# ╔═╡ b0070a92-10fc-4610-86eb-a33fa2d9b96a
+md"""
+#### Merge with IP database
+"""
+
+# ╔═╡ 6b605489-2e10-4d80-8160-7913ce8c5661
+function geo_join_ip_db(df_count::DataFrame)
+
+	df_ipv4 = ip_csv_to_df("dbip-city-lite-2025-02.csv")
+
+	all_ips = df_count[!, :remoteAddr]
+	all_matches = DataFrame[]
+	found_ips = String[]
+
+	for ip in all_ips
+		ip_int = ip |> IPv4 |> UInt32
+		df_match = filter(row -> row.ip_start ≤ ip_int ≤ row.ip_end, df_ipv4)
+
+		if ~isempty(df_match)
+			push!(all_matches, select(df_match,
+				                      :country,
+				                      :stateprov,
+				                      :city			
+			                          )
+			      )
+			push!(found_ips, ip)
+		end
+	end
+
+	df_all = DataFrame(vcat(all_matches...))
+
+	insertcols!(df_all, 1, :remoteAddr => found_ips)	
+	
+	return df_all
+
+end
+
+# ╔═╡ 31a396b8-c218-4776-8790-51bf5162f6f1
+df_geo_db = geo_join_ip_db(df_count)
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -723,5 +762,8 @@ version = "5.11.0+0"
 # ╟─280be0cd-228c-42cb-a65a-1f717c98ceb6
 # ╟─4f0aa43d-4e7a-4ea0-82cb-05197cba68bb
 # ╠═872d359e-c013-4f72-a569-867d3fa3805d
+# ╟─b0070a92-10fc-4610-86eb-a33fa2d9b96a
+# ╠═6b605489-2e10-4d80-8160-7913ce8c5661
+# ╠═31a396b8-c218-4776-8790-51bf5162f6f1
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
