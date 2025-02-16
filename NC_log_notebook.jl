@@ -302,7 +302,59 @@ function geo_join_ip_db(df_count::DataFrame)
 end
 
 # ╔═╡ 31a396b8-c218-4776-8790-51bf5162f6f1
-df_geo_db = geo_join_ip_db(df_count)
+@time df_geo_db = geo_join_ip_db(df_count)
+
+# ╔═╡ d6453d94-9580-4146-86f9-0511143487a3
+function geo_join_ip_db_opt(df_count::DataFrame)
+
+	df_ipv4 = ip_csv_to_df("dbip-city-lite-2025-02.csv")
+	
+	# Sort IP database for binary search speedup
+    sort!(df_ipv4, :ip_start)
+
+	all_ips = df_count[!, :remoteAddr]
+	all_matches = DataFrame[]
+	found_ips = String[]
+
+	for ip in all_ips
+
+		ip_int = ip |> IPv4 |> UInt32
+
+		idx = searchsortedfirst(df_ipv4[!, :ip_start], ip_int)
+		df_match = DataFrame()
+
+		if idx ≤ nrow(df_ipv4)
+			# Match is found where ip_int == ip_start at idx
+			if df_ipv4[idx, :ip_start] ≤ ip_int ≤ df_ipv4[idx, :ip_end]
+				df_match = df_ipv4[idx:idx, :]
+			# No match --> Look at previous index
+			else
+				df_match = df_ipv4[idx-1:idx-1, :]
+			end
+		end
+
+		if ~isempty(df_match)		
+			push!(all_matches, select(df_match,
+									  :country,
+									  :stateprov,
+									  :city			
+									  )
+				 )
+			push!(found_ips, ip)
+		end
+		
+	end
+
+	df_all = DataFrame(vcat(all_matches...))
+
+	insertcols!(df_all, 1, :remoteAddr => found_ips)	
+	
+	return df_all
+
+end
+
+# ╔═╡ 2fa4826b-8c4a-4c1c-b7d6-571af1753459
+@time df_geo_db_opt = geo_join_ip_db_opt(df_count)
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -763,7 +815,9 @@ version = "5.11.0+0"
 # ╟─4f0aa43d-4e7a-4ea0-82cb-05197cba68bb
 # ╠═872d359e-c013-4f72-a569-867d3fa3805d
 # ╟─b0070a92-10fc-4610-86eb-a33fa2d9b96a
-# ╠═6b605489-2e10-4d80-8160-7913ce8c5661
+# ╟─6b605489-2e10-4d80-8160-7913ce8c5661
 # ╠═31a396b8-c218-4776-8790-51bf5162f6f1
+# ╟─d6453d94-9580-4146-86f9-0511143487a3
+# ╠═2fa4826b-8c4a-4c1c-b7d6-571af1753459
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
