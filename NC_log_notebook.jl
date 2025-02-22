@@ -139,7 +139,7 @@ end
 #get_count(df_domain, [:userAgent])
 
 # ╔═╡ 8e99afc7-aa99-4ce5-9d45-a77492f0c412
-df_count = get_count(df_domain, "Macintosh", [:remoteAddr])
+df_count = get_count(df_domain, "Gecko", [:remoteAddr])
 
 # ╔═╡ 40f83181-b9ff-4cfc-b439-d0027a215cd0
 md"""
@@ -827,7 +827,7 @@ version = "5.11.0+0"
 # ╟─b0070a92-10fc-4610-86eb-a33fa2d9b96a
 # ╟─6b605489-2e10-4d80-8160-7913ce8c5661
 # ╠═31a396b8-c218-4776-8790-51bf5162f6f1
-# ╟─d6453d94-9580-4146-86f9-0511143487a3
+# ╠═d6453d94-9580-4146-86f9-0511143487a3
 # ╠═2fa4826b-8c4a-4c1c-b7d6-571af1753459
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
